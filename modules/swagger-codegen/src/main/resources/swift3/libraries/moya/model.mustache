@@ -6,10 +6,10 @@
 //
 
 import Foundation
-import ObjectMapper
+import Marshal
 
 {{#description}}
-
+{
 /** {{description}} */{{/description}}
 {{#isArrayModel}}
 public typealias {{classname}} = [{{arrayModelType}}]
@@ -27,7 +27,14 @@ public enum {{classname}}: {{dataType}} {
 public typealias {{classname}} = {{dataType}}
 {{/vars.isEmpty}}
 {{^vars.isEmpty}}
-open class {{classname}}: {{#parent}}{{{parent}}}{{/parent}} {
+open class {{classname}}{{#parent}}: {{{parent}}}, Unmarshaling{{/parent}}{{^parent}}: Unmarshaling{{/parent}} {
+
+    required public init(object: MarshaledObject) throws {
+    {{#vars}}
+        {{name}} = try object.value(for: "{{baseName}}")
+    {{/vars}}
+    }
+
 {{#vars}}
 {{#isEnum}}
     public enum {{enumName}}: {{^isContainer}}{{datatype}}{{/isContainer}}{{#isContainer}}String{{/isContainer}} { {{#allowableValues}}{{#enumVars}}
@@ -59,14 +66,6 @@ open class {{classname}}: {{#parent}}{{{parent}}}{{/parent}} {
 {{/unwrapRequired}}
 }
 
-extension {{classname}}: Mappable {
-
-    func mapping(map: Map) {
-        {{#vars}}
-        {{name}} <- map["{{baseName}}"]
-        {{/vars}}
-    }
-}
 {{/vars.isEmpty}}
 {{/isEnum}}
 {{/isArrayModel}}

@@ -1,26 +1,6 @@
 package io.swagger.codegen.languages;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import io.swagger.codegen.*;
-import io.swagger.models.Model;
-import io.swagger.models.Operation;
-import io.swagger.models.Swagger;
-import io.swagger.models.parameters.HeaderParameter;
-import io.swagger.models.parameters.Parameter;
-import io.swagger.models.properties.ArrayProperty;
-import io.swagger.models.properties.MapProperty;
-import io.swagger.models.properties.Property;
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.text.WordUtils;
-
-import javax.annotation.Nullable;
-import java.io.File;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import io.swagger.codegen.SupportingFile;
 
 public class Swift3MoyaCodegen extends AbstractSwift3Codegen {
 
@@ -53,7 +33,7 @@ public class Swift3MoyaCodegen extends AbstractSwift3Codegen {
     @Override
     public String toApiName(String name) {
         if (name.length() == 0)
-            return "APITargets";
-        return initialCaps(name) + "Targets";
+            return "APIService";
+        return initialCaps(name) + "Service";
     }
 }

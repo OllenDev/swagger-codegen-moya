@@ -5,65 +5,85 @@
 // https://github.com/swagger-api/swagger-codegen
 //
 
-import Alamofire{{#usePromiseKit}}
-import PromiseKit{{/usePromiseKit}}{{#useRxSwift}}
-import RxSwift{{/useRxSwift}}
+import Alamofire
+import RxSwift
+import Moya
 
-{{#swiftUseApiNamespace}}
-extension {{projectName}}API {
-{{/swiftUseApiNamespace}}
-
-{{#description}}
-/** {{description}} */{{/description}}
-open class {{classname}} {
+enum {{classname}} {
 {{#operation}}
-    /**
-    {{#summary}}
-    {{{summary}}}
-    {{/summary}}
-    - {{httpMethod}} {{path}}{{#notes}}
-    - {{{notes}}}{{/notes}}{{#subresourceOperation}}
-    - subresourceOperation: {{subresourceOperation}}{{/subresourceOperation}}{{#defaultResponse}}
-    - defaultResponse: {{defaultResponse}}{{/defaultResponse}}{{#authMethods}}
-    - {{#isBasic}}BASIC{{/isBasic}}{{#isOAuth}}OAuth{{/isOAuth}}{{#isApiKey}}API Key{{/isApiKey}}:
-        - type: {{type}}{{#keyParamName}} {{keyParamName}} {{#isKeyInQuery}}(QUERY){{/isKeyInQuery}}{{#isKeyInHeaer}}(HEADER){{/isKeyInHeaer}}{{/keyParamName}}
-        - name: {{name}}{{/authMethods}}{{#responseHeaders}}
-    - responseHeaders: {{responseHeaders}}{{/responseHeaders}}{{#examples}}
-    - examples: 
-        {{{examples}}}{{/examples}}{{#externalDocs}}
-    - externalDocs: {{externalDocs}}{{/externalDocs}}{{#hasParams}}
-     {{/hasParams}}{{#allParams}}
-    - parameter {{paramName}}: ({{#isFormParam}}form{{/isFormParam}}{{#isQueryParam}}query{{/isQueryParam}}{{#isPathParam}}path{{/isPathParam}}{{#isHeaderParam}}header{{/isHeaderParam}}{{#isBodyParam}}body{{/isBodyParam}}) {{description}} {{^required}}(optional{{#defaultValue}}, default to {{{.}}}{{/defaultValue}}){{/required}}{{/allParams}}
-    */
-
-    struct {{operationId}}Target: APITargetType{{#hasHeaderParams}}, HeaderTargetConvertible{{/hasHeaderParams}} {
-
-        {{^pathParams}}let path: String = "{{path}}"{{/pathParams}}{{#pathParams}}{{^secondaryParam}}var{{/secondaryParam}} path: String {
-            var path: String = = "{{path}}"
-            return path.replacingOccurrences(of: "{{=<% %>=}}{<%baseName%>}<%={{ }}=%>", with: "\({{paramName}}{{#isEnum}}{{#isContainer}}{{{dataType}}}{{/isContainer}}{{^isContainer}}.rawValue{{/isContainer}}{{/isEnum}})", options: .literal, range: nil)
-        }
-        {{/pathParams}}
-
-        let method = Moya.Method(rawValue: "{{httpMethod}}")
-
-        {{#hasFormParams}}
-        {{#isMultipart}}
-        {{>parameters/multipart}}
-        {{/isMultipart}}
-        {{/hasFormParams}}
-        {{#allParams}}
-        let {{{paramName}}}: {{{dataType}}}{{^required}}?{{/required}}
-        {{/allParams}}
-        {{#hasParams}}
-        {{^hasPathParamsOnly}}
-        
-        {{>parameters/parameters}}
-        {{/hasPathParamsOnly}}
-        {{/hasParams}}
-    }
+    case {{operationId}}{{#allParams}}{{#-first}}({{/-first}}{{^-first}}, {{/-first}}{{{paramName}}}: {{{dataType}}}{{#-last}}){{/-last}}{{/allParams}}
 {{/operation}}
 }
-{{#swiftUseApiNamespace}}
+
+extension {{classname}}: TargetType {
+
+    var baseURL: URL { return URL(string: "{{basePath}}")! }
+
+    var path: String {
+        switch self {
+        {{#operation}}
+        case .{{operationId}}{{#allParams}}{{#-first}}({{/-first}}{{^-first}}, {{/-first}}let {{{paramName}}}{{#-last}}){{/-last}}{{/allParams}}:
+            {{^pathParams}}
+            return "{{path}}"
+            {{/pathParams}}
+            {{#pathParams}}
+            let path: String = "{{path}}"
+            return path.replacingOccurrences(of: "{{=<% %>=}}{<%baseName%>}<%={{ }}=%>", with: "\({{paramName}}{{#isEnum}}{{#isContainer}}{{{dataType}}}{{/isContainer}}{{^isContainer}}.rawValue{{/isContainer}}{{/isEnum}})", options: .literal, range: nil)
+            {{/pathParams}}
+        {{/operation}}
+        }
+    }
+
+    /// The HTTP method used in the request.
+    var method: Moya.Method {
+        switch self {
+        {{#operation}}
+        case .{{operationId}}:
+            return Moya.Method(rawValue: "{{httpMethod}}")!
+        {{/operation}}
+        }
+    }
+
+    /// The parameters to be encoded in the request.
+    var parameters: [String: Any]? {
+        switch self {
+        {{#operation}}
+        case .{{operationId}}{{#allParams}}{{#-first}}({{/-first}}{{^-first}}, {{/-first}}let {{{paramName}}}{{#-last}}){{/-last}}{{/allParams}}:
+        {{^queryParams}}{{^bodyParam}}return nil{{/bodyParam}}{{/queryParams}}
+        {{#hasQueryParam}}return {{#queryParams}}{{#-first}}[{{/-first}}{{^-first}}, {{/-first}}"{{paramName}}": {{paramName}}{{#-last}}]{{/-last}}{{/queryParams}}{{/hasQueryParam}}
+        {{#hasBodyParam}}return {{#bodyParams}}{{#-first}}[{{/-first}}{{^-first}}, {{/-first}}"{{paramName}}": {{paramName}}{{#-last}}]{{/-last}}{{/bodyParams}}{{/hasBodyParam}}
+        {{^hasBodyParam}}return {{#allParams}}{{#-first}}[{{/-first}}{{^-first}}, {{/-first}}"{{paramName}}": {{paramName}}{{#-last}}]{{/-last}}{{/allParams}}{{/hasBodyParam}}
+        {{#hasFormParam}}return form{{/hasFormParam}}
+        {{/operation}}
+        }
+    }
+
+    /// The method used for parameter encoding.
+    var parameterEncoding: ParameterEncoding {
+        switch self {
+        {{#operation}}
+        case .{{operationId}}:
+            return {{^hasBodyParam}}URLEncoding.default{{/hasBodyParam}}{{#hasBodyParam}}JSONEncoding.default{{/hasBodyParam}}
+        {{/operation}}
+        }
+    }
+
+    /// Provides stub data for use in testing.
+    var sampleData: Data { return "Half measures are as bad as nothing at all.".utf8Encoded }
+
+    /// The type of HTTP task to be performed.
+    var task: Task { return Task.request }
+
 }
-{{/swiftUseApiNamespace}}
+
+// MARK: - Helpers
+private extension String {
+var urlEscaped: String {
+return self.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed)!
+}
+
+var utf8Encoded: Data {
+return self.data(using: .utf8)!
+}
+}
 {{/operations}}
